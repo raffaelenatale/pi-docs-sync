@@ -27,13 +27,22 @@ Configure once, download optimally, and every session afterwards consults the of
 
 ## Install
 
-```bash
-# from a local checkout
-pi install /path/to/pi-docs-sync
+**Global (recommended) — straight from this repo, no registry needed:**
 
-# or load for a single invocation, to try it
-pi -e /path/to/pi-docs-sync/extensions/docs-sync/index.ts
+```bash
+pi install git:github.com/raffaelenatale/pi-docs-sync            # tracks main
+pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.0     # pinned to a tag
 ```
+
+`pi install` without `--local` writes the package to `~/.pi/agent/settings.json`, so the extension loads in **every** workspace. Reconcile with `pi update --extensions`, remove with `pi remove git:github.com/raffaelenatale/pi-docs-sync`.
+
+**Try it for one invocation, without installing:**
+
+```bash
+pi -e git:github.com/raffaelenatale/pi-docs-sync
+```
+
+**Local checkout (development):** `pi install /path/to/pi-docs-sync` loads from the working tree without copying — edit and `/reload`.
 
 No runtime dependencies — only Pi's host-provided packages.
 
