@@ -12,11 +12,16 @@
     "cache"
   ],
   "license": "MIT",
+  "author": "Raffaele Natale",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/raffaelenatale/pi-docs-sync.git"
   },
+  "bugs": {
+    "url": "https://github.com/raffaelenatale/pi-docs-sync/issues"
+  },
+  "homepage": "https://github.com/raffaelenatale/pi-docs-sync#readme",
   "pi": {
     "extensions": ["extensions/docs-sync/index.ts"]
   },

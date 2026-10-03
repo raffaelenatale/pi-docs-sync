@@ -1,14 +1,29 @@
 # pi-docs-sync
 
-Pi extension that mirrors **official documentation published as `llms.txt` / `llms-full.txt`** into a local, structured folder tree — with differential (ETag / Last-Modified / sha256) syncing, background TTL refresh, and zero-latency local `docs_search` / `docs_read` tools for the agent.
+[![CI](https://github.com/raffaelenatale/pi-docs-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/raffaelenatale/pi-docs-sync/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Node](https://img.shields.io/node/v/%40raffaelenatale/pi-docs-sync)
 
-Born from [RFC pi-skills#41](https://github.com/raffaelenatale/pi-skills/issues/41): *configure once, download optimally, then let every session consult the official docs locally and refresh them asynchronously when due.*
+A [Pi coding agent](https://github.com/earendil-works/pi) extension that mirrors **official documentation published as [`llms.txt`](https://llmstxt.org) / `llms-full.txt`** into a local, structured folder tree — then keeps it fresh with differential (ETag / `Last-Modified` / sha256) syncing on a background TTL, and routes the agent to it with zero-latency local search and read tools.
+
+Configure once, download optimally, and every session afterwards consults the official docs **offline** — refreshing them asynchronously only when they are due.
+
+```text
+.pi/docs.json ──▶ discover llms-full.txt / llms.txt ──▶ differential fetch (304 ≈ 0 bytes)
+                     │                                        │
+                     ▼                                        ▼
+             structured mirror                         manifest.json (validators,
+        <host>/<path>.md (+ sections/)                 hashes, redirects, sizes)
+                     │                                        │
+                     ▼                                        ▼
+        docs_search / docs_read (local)          async TTL refresh (background)
+```
 
 ## Why
 
-- Web-fetching docs every turn is slow, token-hungry and rate-limited; model memory goes stale.
-- `llms.txt` (llmstxt.org) gives agents a curated Markdown index; `llms-full.txt` gives the whole corpus in one file.
-- This extension turns that into an **offline, diff-updated local mirror** the agent is routed to automatically.
+- **Web-fetching docs every turn** is slow, token-hungry, rate-limited, and pollutes context with HTML boilerplate.
+- **Model memory goes stale** for fast-moving frameworks.
+- The [`llms.txt` convention](https://llmstxt.org) gives agents a curated Markdown index (`llms.txt`) and often the entire corpus in one file (`llms-full.txt`) — this extension turns that into an offline, diff-updated local mirror the agent is routed to automatically.
 
 ## Install
 
@@ -16,79 +31,125 @@ Born from [RFC pi-skills#41](https://github.com/raffaelenatale/pi-skills/issues/
 # from a local checkout
 pi install /path/to/pi-docs-sync
 
-# or per-invocation, to try it
+# or load for a single invocation, to try it
 pi -e /path/to/pi-docs-sync/extensions/docs-sync/index.ts
 ```
 
-## Configure once per workspace: `.pi/docs.json`
+No runtime dependencies — only Pi's host-provided packages.
+
+## Quick start
+
+Add a `.pi/docs.json` in your workspace:
 
 ```json
 {
-  "version": 1,
-  "storage": "global",
-  "defaultTtlHours": 168,
-  "sources": {
-    "ty":       { "url": "https://docs.astral.sh/ty/",   "ttlHours": 168 },
-    "fastmcp":  { "url": "https://gofastmcp.com/",       "ttlHours": 72 },
-    "pydantic": { "url": "https://docs.pydantic.dev/latest/", "exclude": ["**/blog/**"] }
-  }
+	"version": 1,
+	"storage": "global",
+	"defaultTtlHours": 168,
+	"sources": {
+		"ty": { "url": "https://docs.astral.sh/ty/" },
+		"fastmcp": { "url": "https://gofastmcp.com/", "ttlHours": 72 }
+	}
 }
 ```
 
-- `url` may be the docs base (the extension probes `<base>/llms-full.txt` then `<base>/llms.txt`) or a direct link to either file.
-- `ttlHours` controls the async background re-check. Default 168 h (7 days).
-- `include` / `exclude` are globs matched on the URL path (`*` stays in-segment, `**` crosses).
-- `allowExternal: true` also mirrors pages the index references on other hosts (default: same host only).
-- `storage`: `global` (default) mirrors into `~/.pi/agent/docs-mirror/<source>/` shared by all workspaces; `workspace` mirrors into `.pi/docs-mirror/` (e.g. to commit docs into the repo).
-- A global config at `~/.pi/agent/docs.json` is merged under the workspace one (workspace wins by name).
+Start Pi. On `session_start` the extension probes each URL for `llms-full.txt` / `llms.txt`, mirrors the docs in the background, and from then on the model sees a system-prompt note pointing it at the local tools:
 
-## What happens at sync
+```
+ty — tree · 20 pages · 374.0 KiB · TTL 168h · checked 5m ago
+```
 
-1. **Discovery** — probes `llms-full.txt` first (single-file mode, sharded into `sections/*.md` outside code fences), else `llms.txt` (tree mode).
-2. **Tree mode** — parses every `- [Title](url): desc` link, resolves relative/redirected URLs, filters, and downloads each page into `<sourceRoot>/<host>/<path>.md` (decoded, sanitized, traversal-refused, `.html`→`.md`, trailing slash→`index.md`, collisions deduped).
-3. **Differential** — every request carries `If-None-Match` / `If-Modified-Since`; `304` costs bytes≈0. Bodies are written only when the sha256 changed; pages dropped from the index are pruned; every page is tracked in an atomic `manifest.json` (validators, hashes, sizes, redirects, skips).
-4. **Politeness** — max 5 concurrent requests, per-request timeout, size caps, descriptive User-Agent.
+Or configure interactively:
 
-## When it refreshes
+```text
+/docs add fastapi https://fastapi.tiangolo.com/ 168
+/docs sync
+```
 
-- On `session_start` (and every 10 min while the session lives) each source whose `lastChecked + ttl` has expired is synced **in the background** — never blocking a turn. A quiet status-line entry tracks it, and a notification reports fresh pages.
-- Failed syncs retry after ~1 h instead of the full TTL. Everything is abortable on session shutdown.
+## Configuration reference
 
-## What the agent gets
+`.pi/docs.json` (workspace) is merged over `~/.pi/agent/docs.json` (global); workspace entries win by name.
 
-| Tool | Purpose |
-| --- | --- |
-| `docs_list` | Configured sources: mode, pages, size, freshness, disk path. |
-| `docs_search` | Multi-term AND search with line-numbered snippets across the mirror (local, no network). |
-| `docs_read` | Read a page (or line range) by path from search results, or by `query` to land on the best page. |
-| `docs_sync` | Force a differential sync now (network I/O, reports `+fetched ~unchanged -removed`). |
+| Field | Where | Default | Meaning |
+| --- | --- | --- | --- |
+| `sources.<name>.url` | per source | — | Docs base URL (probes `<base>/llms-full.txt`, then `<base>/llms.txt`) or a direct link to either file. |
+| `sources.<name>.ttlHours` | per source | `defaultTtlHours` | Hours between background re-checks. |
+| `sources.<name>.include` / `.exclude` | per source | keep all | Globs matched on the URL path (`*` stays in-segment, `**` crosses segments). `exclude` wins. |
+| `sources.<name>.allowExternal` | per source | `false` | Also mirror pages the index references on other hosts. |
+| `defaultTtlHours` | root | `168` | TTL for sources without an explicit one. |
+| `storage` | root | `"global"` | `global` → shared mirror in `~/.pi/agent/docs-mirror/<source>/`; `workspace` → `.pi/docs-mirror/` (e.g. to commit docs into the repo). |
 
-Plus a system-prompt section listing the mirrored sources so the model prefers `docs_search` / `docs_read` over web fetches for those libraries.
+Source names must be filesystem-safe: letters, digits, `.`, `_`, `-` (max 64 chars).
+
+## What sync does
+
+1. **Discovery** — probe `llms-full.txt` first: if found, the corpus is stored as `full.md` and sharded at `#`/`##` headings (code-fence aware) into `sections/NNN-slug.md` with an `index.json`. Otherwise parse `llms.txt`.
+2. **Tree mode** — every `- [Title](url): description` link is resolved against the index URL, filtered, and downloaded into `<sourceRoot>/<host>/<path>.md`:
+   - redirects are followed and the **final** URL determines the local path (external redirects fall back to the requested path and are flagged in the manifest);
+   - percent-decoded, unicode-transliterated, sanitized segments; literal `..` traversal refused; `.html` → `.md`; trailing slash → `index.md`; collisions deduped (`-2`, `-3`, …);
+   - max 5 concurrent requests, per-request timeout, per-page and polite User-Agent.
+3. **Differential** — each request carries `If-None-Match` / `If-Modified-Since`; a `304` costs ≈0 bytes. Bodies are written only when their sha256 changed; pages dropped from the index are pruned from disk; everything is tracked in an atomically-written `manifest.json` (validators, hashes, sizes, redirects, skips).
+4. **Refresh** — sources whose `lastChecked + ttl` expired sync in the background on `session_start` and every 10 minutes while the session lives — never blocking a turn. Failed syncs retry after ~1 h. All requests are abortable on session shutdown.
+
+## Agent tools
+
+| Tool | Params | Purpose |
+| --- | --- | --- |
+| `docs_list` | — | Configured sources: mode, pages, size, freshness, disk path. |
+| `docs_search` | `query`, `source?`, `limit?` | Multi-term AND search (title boost, frequency scoring) across the mirror; returns line-numbered snippets. Local — no network. |
+| `docs_read` | `source`, `path?`/`query?`, `offset?`, `limit?` | Read a page or line range by path from search results, or by `query` to land on the best-matching page; reports the continuation offset. |
+| `docs_sync` | `source?` | Force a differential sync now; reports `+fetched ~unchanged -removed`. |
+
+On top of the tools, each run's system prompt lists the mirrored sources so the model prefers `docs_search` / `docs_read` over web fetches for those libraries.
 
 ## `/docs` command
 
+```text
+/docs                                status of all sources
+/docs add <name> <url> [ttlHours]    add a source and sync it immediately
+/docs remove <name>                  remove from workspace config (mirror files kept)
+/docs sync [name]                    force a differential sync
+/docs list                           alias of status
+/docs path [name]                    print the mirror path on disk
 ```
-/docs                     status of all sources
-/docs add <name> <url> [ttlHours]
-/docs remove <name>
-/docs sync [name]
-/docs list
-/docs path [name]
-```
+
+## How it compares
+
+| | pi-docs-sync | `@m4ss/pi-llms-txt` | `mcpdoc` / MCP llms.txt servers | Cursor `@Docs` | DevDocs / Dash |
+| --- | --- | --- | --- | --- | --- |
+| Local structured mirror | ✅ | single cached file | ❌ (on-demand network) | ❌ (cloud) | HTML/docsets |
+| Differential sync (ETag/hash) | ✅ | TTL-only | ❌ | n/a | manual |
+| Background TTL refresh | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Workspace config + agent routing | ✅ | ❌ | partial | ❌ | ❌ |
+| Works offline after first sync | ✅ | partial | ❌ | ❌ | ✅ (human-facing) |
 
 ## Development
 
 ```bash
 npm install
-npm test        # node --test tests/  (36 tests, incl. e2e sync against a local HTTP server)
-npm run typecheck
+npm test            # node --test tests/ — unit + e2e sync against a local HTTP server
+npm run typecheck   # tsc --noEmit
 ```
 
-No runtime dependencies: only Pi host-provided packages (`peerDependencies: "*"`).
+```text
+extensions/docs-sync/
+├── index.ts      Extension entry: tools, /docs command, TTL timer, system-prompt note
+├── config.ts     Workspace + global config load/merge/save
+├── llms-txt.ts   llmstxt.org parser, link resolution, fence-aware section splitter
+├── net.ts        Conditional GET, hashing, bounded concurrency, body-only probing
+├── mirror.ts     Path mapping, manifest, differential sync engine
+├── search.ts     Local multi-term search with snippets
+└── types.ts
+```
 
-## Prior art
+Requires Node ≥ 22.18 (TypeScript is executed directly by Pi's `jiti` loader; tests use Node's native type stripping).
 
-- `@m4ss/pi-llms-txt` — caches the single `llms.txt` file (40 KB cap, 24 h TTL); no page tree, no diffing, no workspace config.
-- `langchain-ai/mcpdoc`, `llms-txt-mcp` — MCP servers querying llms.txt online; no local mirror, no async TTL refresh.
-- Cursor `@Docs` — proprietary cloud crawl + embeddings; not local Markdown.
-- DevDocs/Dash — human-facing HTML/docsets, not agent-facing Markdown.
+## Limitations & ideas
+
+- Sites without `llms.txt`/`llms-full.txt` are out of scope (a HTML-crawl fallback could be a future extension).
+- Search is keyword-based (AND matching + frequency/title boosts) — fast and dependency-free; a BM25/embedding index could layer on top.
+- No `robots.txt` handling yet; politeness comes from capped concurrency and conditional requests.
+
+## License
+
+[MIT](LICENSE)
