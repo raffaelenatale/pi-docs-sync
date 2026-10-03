@@ -27,24 +27,45 @@ Configure once, download optimally, and every session afterwards consults the of
 
 ## Install
 
-**Global (recommended) — straight from this repo, no registry needed:**
+**From npm (recommended):**
+
+```bash
+pi install npm:@raffaelenatale/pi-docs-sync
+pi install npm:@raffaelenatale/pi-docs-sync@0.1.1   # pinned
+```
+
+**From GitHub Packages** (requires a GitHub classic PAT with `read:packages`):
+
+```ini
+# ~/.npmrc
+@raffaelenatale:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_CLASSIC_PAT
+```
+
+```bash
+pi install npm:@raffaelenatale/pi-docs-sync@0.1.1
+```
+
+**Straight from this repo (no registry needed):**
 
 ```bash
 pi install git:github.com/raffaelenatale/pi-docs-sync            # tracks main
-pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.0     # pinned to a tag
+pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.1     # pinned to a tag
 ```
 
-`pi install` without `--local` writes the package to `~/.pi/agent/settings.json`, so the extension loads in **every** workspace. Reconcile with `pi update --extensions`, remove with `pi remove git:github.com/raffaelenatale/pi-docs-sync`.
+`pi install` without `--local` writes the package to `~/.pi/agent/settings.json`, so the extension loads in **every** workspace. Reconcile with `pi update --extensions`, remove with `pi remove <source>`.
 
 **Try it for one invocation, without installing:**
 
 ```bash
-pi -e git:github.com/raffaelenatale/pi-docs-sync
+pi -e npm:@raffaelenatale/pi-docs-sync
 ```
 
 **Local checkout (development):** `pi install /path/to/pi-docs-sync` loads from the working tree without copying — edit and `/reload`.
 
 No runtime dependencies — only Pi's host-provided packages.
+
+> Releases are published automatically by [`.github/workflows/publish.yml`](.github/workflows/publish.yml) when a `vX.Y.Z` GitHub Release is created: verification (version/tag match, tarball whitelist, typecheck + tests) → npmjs.org (with provenance) → GitHub Packages.
 
 ## Quick start
 
