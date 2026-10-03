@@ -1,6 +1,6 @@
 {
   "name": "@raffaelenatale/pi-docs-sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pi extension: local structured mirror of official docs published as llms.txt / llms-full.txt, with differential (ETag/hash) syncing, async TTL refresh, and zero-latency local search/read tools for the agent.",
   "keywords": [
     "pi-package",
@@ -29,7 +29,9 @@
   },
   "homepage": "https://github.com/raffaelenatale/pi-docs-sync#readme",
   "pi": {
-    "extensions": ["extensions/docs-sync/index.ts"]
+    "extensions": [
+      "extensions/docs-sync/index.ts"
+    ]
   },
   "scripts": {
     "test": "node --test tests/*.test.ts",
