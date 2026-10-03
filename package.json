@@ -1,0 +1,39 @@
+{
+  "name": "@raffaelenatale/pi-docs-sync",
+  "version": "0.1.0",
+  "description": "Pi extension: local structured mirror of official docs published as llms.txt / llms-full.txt, with differential (ETag/hash) syncing, async TTL refresh, and zero-latency local search/read tools for the agent.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "llms-txt",
+    "documentation",
+    "docs",
+    "mirror",
+    "cache"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raffaelenatale/pi-docs-sync.git"
+  },
+  "pi": {
+    "extensions": ["extensions/docs-sync/index.ts"]
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "latest",
+    "@earendil-works/pi-coding-agent": "latest",
+    "@types/node": "^24",
+    "typebox": "latest",
+    "typescript": "^5"
+  }
+}
