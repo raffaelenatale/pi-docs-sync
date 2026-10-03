@@ -14,6 +14,12 @@
   "license": "MIT",
   "author": "Raffaele Natale",
   "type": "module",
+  "files": [
+    "extensions"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/raffaelenatale/pi-docs-sync.git"
