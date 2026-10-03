@@ -127,7 +127,7 @@ On top of the tools, each run's system prompt lists the mirrored sources so the 
 
 ```bash
 npm install
-npm test            # node --test tests/ — unit + e2e sync against a local HTTP server
+npm test            # node --test — unit + e2e sync against a local HTTP server
 npm run typecheck   # tsc --noEmit
 ```
 
