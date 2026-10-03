@@ -46,10 +46,16 @@ jobs:
         with:
           node-version: '22'
           registry-url: https://registry.npmjs.org
-      - name: Publish to npmjs.org
-        run: npm publish --ignore-scripts --access public --provenance
+      - name: Publish to npmjs.org (skipped until NPM_TOKEN secret is configured)
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN secret not set — skipping npmjs.org publish"
+            exit 0
+          fi
+          npm publish --ignore-scripts --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-gpr:
     needs: verify
