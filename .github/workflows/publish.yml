@@ -37,25 +37,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # npm provenance
+      id-token: write # OIDC — npm Trusted Publishing, no token secret
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # npm >= 11.5 required for OIDC trusted publishing
+          node-version: '24'
           registry-url: https://registry.npmjs.org
-      - name: Publish to npmjs.org (skipped until NPM_TOKEN secret is configured)
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "::notice::NPM_TOKEN secret not set — skipping npmjs.org publish"
-            exit 0
-          fi
-          npm publish --ignore-scripts --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npmjs.org (OIDC trusted publishing)
+        run: npm publish --ignore-scripts --access public --provenance
 
   publish-gpr:
     needs: verify

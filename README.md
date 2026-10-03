@@ -65,7 +65,9 @@ pi -e npm:@raffaelenatale/pi-docs-sync
 
 No runtime dependencies — only Pi's host-provided packages.
 
-> Releases are published automatically by [`.github/workflows/publish.yml`](.github/workflows/publish.yml) when a `vX.Y.Z` GitHub Release is created: verification (version/tag match, tarball whitelist, typecheck + tests) → npmjs.org (with provenance) → GitHub Packages.
+> Releases are published automatically by [`.github/workflows/publish.yml`](.github/workflows/publish.yml) when a `vX.Y.Z` GitHub Release is created: verification (version/tag match, tarball whitelist, typecheck + tests) → npmjs.org via **OIDC Trusted Publishing** (no token; requires a one-time Trusted Publisher config on npmjs.com: package → Settings → publisher GitHub Actions, repo `raffaelenatale/pi-docs-sync`, workflow `publish.yml`) → GitHub Packages via `GITHUB_TOKEN`.
+>
+> This follows the npm security direction after the [GAT bypass-2FA deprecation](https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/): no long-lived publish tokens; local publishes use `npm publish --otp`, CI uses OIDC.
 
 ## Quick start
 
