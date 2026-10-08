@@ -1,6 +1,6 @@
 {
   "name": "@raffaelenatale/pi-docs-sync",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Pi extension: local structured mirror of official docs published as llms.txt / llms-full.txt, with differential (ETag/hash) syncing, async TTL refresh, and zero-latency local search/read tools for the agent.",
   "keywords": [
     "pi-package",

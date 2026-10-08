@@ -27,11 +27,11 @@ Configure once, download optimally, and every session afterwards consults the of
 
 ## Install
 
-**From npm (recommended):**
+**From this GitHub repo (recommended, no registry or token needed):**
 
 ```bash
-pi install npm:@raffaelenatale/pi-docs-sync
-pi install npm:@raffaelenatale/pi-docs-sync@0.1.1   # pinned
+pi install git:github.com/raffaelenatale/pi-docs-sync            # tracks main
+pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.4     # pinned to a tag
 ```
 
 **From GitHub Packages** (requires a GitHub classic PAT with `read:packages`):
@@ -43,31 +43,24 @@ pi install npm:@raffaelenatale/pi-docs-sync@0.1.1   # pinned
 ```
 
 ```bash
-pi install npm:@raffaelenatale/pi-docs-sync@0.1.1
+pi install npm:@raffaelenatale/pi-docs-sync@0.1.4
 ```
 
-**Straight from this repo (no registry needed):**
-
-```bash
-pi install git:github.com/raffaelenatale/pi-docs-sync            # tracks main
-pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.3     # pinned to a tag
-```
+The package is no longer published to npmjs.org (the last version there, 0.1.1, is outdated).
 
 `pi install` without `--local` writes the package to `~/.pi/agent/settings.json`, so the extension loads in **every** workspace. Reconcile with `pi update --extensions`, remove with `pi remove <source>`.
 
 **Try it for one invocation, without installing:**
 
 ```bash
-pi -e npm:@raffaelenatale/pi-docs-sync
+pi -e git:github.com/raffaelenatale/pi-docs-sync
 ```
 
 **Local checkout (development):** `pi install /path/to/pi-docs-sync` loads from the working tree without copying — edit and `/reload`.
 
 No runtime dependencies — only Pi's host-provided packages.
 
-> Releases are published automatically by [`.github/workflows/publish.yml`](.github/workflows/publish.yml) when a `vX.Y.Z` GitHub Release is created: verification (version/tag match, tarball whitelist, typecheck + tests) → npmjs.org via **OIDC Trusted Publishing** (no token; requires a one-time Trusted Publisher config on npmjs.com: package → Settings → publisher GitHub Actions, repo `raffaelenatale/pi-docs-sync`, workflow `publish.yml`) → GitHub Packages via `GITHUB_TOKEN`.
->
-> This follows the npm security direction after the [GAT bypass-2FA deprecation](https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/): no long-lived publish tokens; local publishes use `npm publish --otp`, CI uses OIDC.
+> Releases are published automatically by [`.github/workflows/publish.yml`](.github/workflows/publish.yml) when a `vX.Y.Z` GitHub Release is created: verification (version/tag match, tarball whitelist, typecheck + tests) → GitHub Packages via `GITHUB_TOKEN`. The `vX.Y.Z` tag itself is the git install channel.
 
 ## Quick start
 
@@ -153,7 +146,7 @@ Idempotent; each step writes only when something is missing:
 | File | Change | Why |
 | --- | --- | --- |
 | `.gitignore` (git root only) | adds `.pi/docs-mirror/` | the mirror is a per-user cache; never commit it |
-| `.pi/settings.json` | declares `npm:@raffaelenatale/pi-docs-sync` in `packages` | teammates get the extension after trusting the project |
+| `.pi/settings.json` | declares `git:github.com/raffaelenatale/pi-docs-sync` in `packages` | teammates get the extension after trusting the project |
 | `AGENTS.md` (or `CLAUDE.md` if only that exists) | path-free block between `<!-- BEGIN/END pi-docs-sync -->` | tells agents to use `docs_*` tools, and how to install them if missing |
 
 Commit `.pi/docs.json`, `.pi/settings.json`, `.gitignore` and `AGENTS.md`; the mirror stays out of git (with `storage: "global"` it lives in `~/.pi/agent/docs-mirror/` anyway).

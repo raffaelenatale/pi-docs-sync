@@ -11,7 +11,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export const PACKAGE_SOURCE = "npm:@raffaelenatale/pi-docs-sync";
+/** Public GitHub repo: installs without any registry token. */
+export const PACKAGE_SOURCE = "git:github.com/raffaelenatale/pi-docs-sync";
 export const MIRROR_IGNORE_ENTRY = ".pi/docs-mirror/";
 export const AGENTS_BEGIN = "<!-- BEGIN pi-docs-sync -->";
 export const AGENTS_END = "<!-- END pi-docs-sync -->";
