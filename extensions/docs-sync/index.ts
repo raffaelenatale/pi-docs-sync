@@ -116,6 +116,15 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 		return { cwd, config, globalConfig, mirrorRoot: mirrorRootFor(config, cwd, getAgentDir()), hasMirrors: false };
 	};
 
+	// Re-read the config from disk so that edits to .pi/docs.json (or a file created
+	// mid-session) take effect without `/reload`. Keeps the mirror flag across reloads.
+	const refreshRuntime = (cwd: string): Runtime | null => {
+		const hadMirrors = runtime?.hasMirrors ?? false;
+		runtime = loadRuntime(cwd);
+		if (runtime) runtime.hasMirrors = hadMirrors;
+		return runtime;
+	};
+
 	const syncNow = async (names: readonly string[], opts: { force?: boolean; onProgress?: (message: string) => void } = {}): Promise<SyncResult[]> => {
 		if (!runtime) return [];
 		const results: SyncResult[] = [];
@@ -177,6 +186,7 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 		promptSnippet: "List locally mirrored official docs sources (pi-docs-sync)",
 		promptGuidelines: ["When the user's question concerns a library whose official docs are mirrored locally, prefer docs_search/docs_read over web fetches."],
 		async execute(_id, _params, _signal, _onUpdate, ctx) {
+			refreshRuntime(ctx.cwd);
 			const status = runtime ? collectStatus(runtime) : [];
 			return {
 				content: [{ type: "text", text: formatStatusTable(status) }],
@@ -198,7 +208,8 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 		}),
 		promptSnippet: "Search locally mirrored official docs (pi-docs-sync)",
 		promptGuidelines: ["Prefer docs_search over web fetches for libraries mirrored locally; results are offline and token-efficient."],
-		async execute(_id, params, signal, _onUpdate, _ctx) {
+		async execute(_id, params, signal, _onUpdate, ctx) {
+			refreshRuntime(ctx.cwd);
 			if (!runtime || Object.keys(runtime.config.sources).length === 0) {
 				return { content: [{ type: "text", text: "No documentation sources configured. Use `/docs add <name> <url>`." }], details: { hits: [] } };
 			}
@@ -242,7 +253,8 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 			limit: Type.Optional(Type.Number({ description: "Max lines to return (default 120, max 400)." })),
 		}),
 		promptSnippet: "Read a page from locally mirrored official docs (pi-docs-sync)",
-		async execute(_id, params, _signal, _onUpdate, _ctx) {
+		async execute(_id, params, _signal, _onUpdate, ctx) {
+			refreshRuntime(ctx.cwd);
 			if (!runtime) return { content: [{ type: "text", text: "pi-docs-sync is not configured in this workspace." }], details: undefined, isError: true };
 			const sourceRoot = sourceRootFor(runtime.mirrorRoot, params.source);
 			if (!runtime.config.sources[params.source]) {
@@ -304,7 +316,8 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 		}),
 		promptSnippet: "Refresh the local official-docs mirror (pi-docs-sync)",
 		promptGuidelines: ["docs_sync performs network I/O; use it only when the user asks for a refresh or local docs are clearly missing a needed page."],
-		async execute(_id, params, _signal, onUpdate) {
+		async execute(_id, params, _signal, onUpdate, ctx) {
+			refreshRuntime(ctx.cwd);
 			if (!runtime) return { content: [{ type: "text", text: "No documentation sources configured in this workspace." }], details: undefined, isError: true };
 			const names = params.source ? [params.source] : Object.keys(runtime.config.sources);
 			if (params.source && !runtime.config.sources[params.source]) {
@@ -360,7 +373,8 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 		runtime = null;
 	});
 
-	pi.on("before_agent_start", async (event) => {
+	pi.on("before_agent_start", async (event, ctx) => {
+		refreshRuntime(ctx.cwd);
 		if (!runtime) return undefined;
 		const status = collectStatus(runtime);
 		if (status.length === 0) return undefined;
