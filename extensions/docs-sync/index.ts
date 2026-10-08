@@ -22,6 +22,7 @@ import {
 } from "./config.ts";
 import { isDue, mirrorRootFor, readManifest, sourceRootFor, syncSourceQueued } from "./mirror.ts";
 import { searchMirror, searchSource } from "./search.ts";
+import { formatSetupResult, setupWorkspace } from "./workspace-setup.ts";
 import type { DocsConfig, DocsSourceConfig, SourceManifest, SyncResult } from "./types.ts";
 
 const TIMER_INTERVAL_MS = 10 * 60_000;
@@ -399,9 +400,9 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 	};
 
 	pi.registerCommand("docs", {
-		description: "Manage the local official-docs mirror (pi-docs-sync): add | remove | list | sync | status | path",
+		description: "Manage the local official-docs mirror (pi-docs-sync): add | remove | list | sync | status | path | setup",
 		getArgumentCompletions: (prefix) => {
-			const subcommands = ["add", "remove", "list", "sync", "status", "path"].filter((s) => s.startsWith(prefix));
+			const subcommands = ["add", "remove", "list", "sync", "status", "path", "setup"].filter((s) => s.startsWith(prefix));
 			return subcommands.length > 0 ? subcommands.map((value) => ({ value, label: value })) : null;
 		},
 		handler: async (args, ctx) => {
@@ -449,6 +450,7 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 				if (ttlHours !== undefined) sourceConfig.ttlHours = ttlHours;
 				workspaceConfig.sources[name] = sourceConfig;
 				writeConfigFile(workspaceConfigPath, workspaceConfig);
+				ctx.ui.notify(formatSetupResult(setupWorkspace(ctx.cwd)), "info");
 				runtime = loadRuntime(ctx.cwd) ?? runtime;
 				if (ctx.hasUI) ctx.ui.setStatus("docs-sync", `${runtime ? Object.keys(runtime.config.sources).length : 0} doc sources`);
 				await syncCommand([name], ctx);
@@ -508,7 +510,12 @@ export default function docsSyncExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			ctx.ui.notify(`Unknown subcommand '${subcommand ?? ""}'. Use: add | remove | list | sync | status | path`, "warning");
+			if (subcommand === "setup") {
+				ctx.ui.notify(formatSetupResult(setupWorkspace(ctx.cwd)), "info");
+				return;
+			}
+
+			ctx.ui.notify(`Unknown subcommand '${subcommand ?? ""}'. Use: add | remove | list | sync | status | path | setup`, "warning");
 		},
 	});
 }

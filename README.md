@@ -50,7 +50,7 @@ pi install npm:@raffaelenatale/pi-docs-sync@0.1.1
 
 ```bash
 pi install git:github.com/raffaelenatale/pi-docs-sync            # tracks main
-pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.1     # pinned to a tag
+pi install git:github.com/raffaelenatale/pi-docs-sync@v0.1.3     # pinned to a tag
 ```
 
 `pi install` without `--local` writes the package to `~/.pi/agent/settings.json`, so the extension loads in **every** workspace. Reconcile with `pi update --extensions`, remove with `pi remove <source>`.
@@ -138,12 +138,25 @@ On top of the tools, each run's system prompt lists the mirrored sources so the 
 
 ```text
 /docs                                status of all sources
-/docs add <name> <url> [ttlHours]    add a source and sync it immediately
+/docs add <name> <url> [ttlHours]    add a source, run workspace setup, sync it immediately
 /docs remove <name>                  remove from workspace config (mirror files kept)
 /docs sync [name]                    force a differential sync
 /docs list                           alias of status
 /docs path [name]                    print the mirror path on disk
+/docs setup                          apply the team setup below to an existing workspace
 ```
+
+### Team setup (`/docs add`, `/docs setup`)
+
+Idempotent; each step writes only when something is missing:
+
+| File | Change | Why |
+| --- | --- | --- |
+| `.gitignore` (git root only) | adds `.pi/docs-mirror/` | the mirror is a per-user cache; never commit it |
+| `.pi/settings.json` | declares `npm:@raffaelenatale/pi-docs-sync` in `packages` | teammates get the extension after trusting the project |
+| `AGENTS.md` (or `CLAUDE.md` if only that exists) | path-free block between `<!-- BEGIN/END pi-docs-sync -->` | tells agents to use `docs_*` tools, and how to install them if missing |
+
+Commit `.pi/docs.json`, `.pi/settings.json`, `.gitignore` and `AGENTS.md`; the mirror stays out of git (with `storage: "global"` it lives in `~/.pi/agent/docs-mirror/` anyway).
 
 ## How it compares
 
